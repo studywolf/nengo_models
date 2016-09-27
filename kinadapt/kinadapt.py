@@ -20,13 +20,9 @@ import numpy as np
 import arm
 
 import nengo
-import nengo.utils.function_space
 
 import importlib
 importlib.reload(arm)
-
-nengo.dists.Function = nengo.utils.function_space.Function
-nengo.FunctionSpace = nengo.utils.function_space.FunctionSpace
 
 # set the initial position of the arm
 dt = 1e-3
@@ -106,9 +102,9 @@ with model:
 
         def target_func(t):
             global count, target
-            if count % 1000 == 0:
+            if count % 3000 == 0:
                 target = (np.random.random(2) *
-                          np.array([2.5, 2]) +
+                          np.array([3.5, 3]) +
                           np.array([-1.25, 1]))
             count += 1
             return target
@@ -130,8 +126,8 @@ with model:
     y = np.zeros(2)  # estimate of dx
     hand_lp = np.zeros(2)  # low pass filtered hand position
     # parameters from experiment 1 of cheah and slotine, 2005
-    kp = 400
-    kv = 100
+    kp = 4
+    kv = 10
     learn_rate_k = np.diag([0.04, 0.045]) * 1e-2
     learn_rate_d = .0005
     alpha = 1.2
@@ -211,7 +207,8 @@ with model:
     # connect error up to learning rule
     nengo.Connection(error_node, conn_learn_kin.learning_rule, transform=-1)
 
-    # dyn_adapt = nengo.Ensemble(n_neurons=500, dimensions=arm.DOF*2)
+    # dyn_adapt = nengo.Ensemble(n_neurons=1000, dimensions=arm.DOF*2,
+    #                            radius=10)
     # nengo.Connection(arm_node[:arm.DOF*2], dyn_adapt)
     # conn_learn_dyn = nengo.Connection(
     #     dyn_adapt, arm_node[:arm.DOF],
