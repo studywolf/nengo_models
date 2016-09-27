@@ -15,11 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+import nengo
 import numpy as np
 
 import arm
-
-import nengo
 
 import importlib
 importlib.reload(arm)
@@ -104,7 +103,7 @@ with model:
             global count, target
             if count % 3000 == 0:
                 target = (np.random.random(2) *
-                          np.array([3.5, 3]) +
+                          np.array([2.5, 2]) +
                           np.array([-1.25, 1]))
             count += 1
             return target
@@ -125,9 +124,10 @@ with model:
     Wk = np.zeros((2, arm.DOF))  # low pass filtered Yk matrix
     y = np.zeros(2)  # estimate of dx
     hand_lp = np.zeros(2)  # low pass filtered hand position
+
     # parameters from experiment 1 of cheah and slotine, 2005
-    kp = 4
-    kv = 10
+    kp = 400
+    kv = 100
     learn_rate_k = np.diag([0.04, 0.045]) * 1e-2
     learn_rate_d = .0005
     alpha = 1.2
@@ -207,6 +207,7 @@ with model:
     # connect error up to learning rule
     nengo.Connection(error_node, conn_learn_kin.learning_rule, transform=-1)
 
+    # dynamics adaptation, uncomment to add in
     # dyn_adapt = nengo.Ensemble(n_neurons=1000, dimensions=arm.DOF*2,
     #                            radius=10)
     # nengo.Connection(arm_node[:arm.DOF*2], dyn_adapt)
