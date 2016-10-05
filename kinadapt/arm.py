@@ -30,7 +30,7 @@ class two_link:
 
         # length of arm links
         self.l1 = 2.0
-        self.l2 = 2.8
+        self.l2 = 1.5
 
         # mass of links
         m1=1.
