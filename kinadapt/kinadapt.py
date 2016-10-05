@@ -28,7 +28,7 @@ dt = 1e-3
 arm = arm.two_link(dt=dt)
 arm.reset(q=[np.pi/5.5, np.pi/1.7], dq=[0, 0])
 
-model = nengo.Network()
+model = nengo.Network(seed=1)
 with model:
 
     # create input nodes
