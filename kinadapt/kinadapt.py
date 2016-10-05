@@ -89,6 +89,7 @@ with model:
         return data
     arm_node = nengo.Node(output=arm_func, size_in=4, size_out=6)
 
+    np.random.seed(2)
     task = 'point to point'  # 'circle trace'
     if task == 'circle trace':
         # specify torque input to arm
@@ -121,6 +122,7 @@ with model:
         function=lambda x: np.ones(2),
         learning_rule_type=nengo.PES(learning_rate=1e-3))
 
+    Yk = np.zeros((2, arm.DOF))  # np.dot(Yk, L) = np.dot(J, dq)
     Wk = np.zeros((2, arm.DOF))  # low pass filtered Yk matrix
     y = np.zeros(2)  # estimate of dx
     hand_lp = np.zeros(2)  # low pass filtered hand position
@@ -141,16 +143,16 @@ with model:
         theta_k = x[arm.DOF*2+4:arm.DOF*3+4]
 
         # generate Jacobian approximation
-        J = np.array([
+        J_hat = np.array([
             [-theta_k[0] * np.sin(q[0]) - theta_k[1] * np.sin(q[0] + q[1]),
              -theta_k[1] * np.sin(q[0] + q[1])],
             [theta_k[0] * np.cos(q[0]) + theta_k[1] * np.cos(q[0] + q[1]),
              theta_k[1] * np.cos(q[0] + q[1])]])
 
         # y is the estimate of dx calculated in error_func
-        u_x = np.dot(kp, (hand - target)) + kv * y
+        u_x = np.dot(kp, (hand - target)) + kv * np.dot(Yk, theta_k) # y
 
-        u = -np.dot(J.T, u_x)
+        u = -np.dot(J_hat.T, u_x)
         return u
 
     mult_node = nengo.Node(mult_func, size_in=10, size_out=arm.DOF)
@@ -163,7 +165,7 @@ with model:
     nengo.Connection(mult_node, arm_node[:arm.DOF])
 
     def error_func(t, x):
-        global Wk, y, hand, hand_lp
+        global Yk, Wk, y, hand, hand_lp
         q = x[:arm.DOF]
         dq = x[arm.DOF:arm.DOF*2]
         delta_x = x[arm.DOF*2:arm.DOF*2+2]
@@ -174,10 +176,11 @@ with model:
         hand_lp += (lamb * (hand - hand_lp)) * dt
         y = lamb * (hand - hand_lp)
 
-        Yk = np.array([[-np.sin(q[0]) * dq[0],
-                        -np.sin(q[0] + q[1]) * (dq[0] + dq[1])],
-                       [np.cos(q[0]) * dq[0],
-                        np.cos(q[0] + q[1]) * (dq[0] + dq[1])]])
+        Yk = np.array([
+            [-np.sin(q[0]) * dq[0],
+             -np.sin(q[0] + q[1]) * (dq[0] + dq[1])],
+            [np.cos(q[0]) * dq[0],
+             np.cos(q[0] + q[1]) * (dq[0] + dq[1])]])
 
         Wk += (lamb * (Yk - Wk)) * dt
 
@@ -188,6 +191,7 @@ with model:
                            np.dot(Yk.T,
                                   np.dot(kp + alpha * kv,
                                          delta_x))))
+        # put reasonable boundaries around theta_k values
         dtheta_k[(theta_k + dtheta_k) < .01] = 0.0
         dtheta_k[(theta_k + dtheta_k) > 3] = 0.0
         # print('dtheta_k: ', dtheta_k)
@@ -208,13 +212,32 @@ with model:
     nengo.Connection(error_node, conn_learn_kin.learning_rule, transform=-1)
 
     # dynamics adaptation, uncomment to add in
-    # dyn_adapt = nengo.Ensemble(n_neurons=1000, dimensions=arm.DOF*2,
-    #                            radius=10)
-    # nengo.Connection(arm_node[:arm.DOF*2], dyn_adapt)
-    # conn_learn_dyn = nengo.Connection(
-    #     dyn_adapt, arm_node[:arm.DOF],
-    #     function=lambda x: np.zeros(arm.DOF),
-    #     learning_rule_type=nengo.PES(learning_rate=1e-4))
-    # # connect up mult_node to training dyn_adapt connection
-    # nengo.Connection(mult_node, conn_learn_dyn.learning_rule,
-    #                  transform=-1)
+    dyn_adapt = nengo.Ensemble(n_neurons=1000, dimensions=arm.DOF*2,
+                               radius=10)
+    nengo.Connection(arm_node[:arm.DOF*2], dyn_adapt)
+    conn_learn_dyn = nengo.Connection(
+        dyn_adapt, arm_node[:arm.DOF],
+        function=lambda x: np.zeros(arm.DOF),
+        learning_rule_type=nengo.PES(learning_rate=1e-3))
+    # connect up training signal to dyn_adapt connection
+    def training_func(t, x):
+        q = x[:arm.DOF]
+        dq = x[arm.DOF:arm.DOF*2]
+        delta_x = x[arm.DOF*2:arm.DOF*2+2]
+        theta_k = x[arm.DOF*2+2:arm.DOF*3+2]
+
+        J_hat = np.array([
+            [-theta_k[0] * np.sin(q[0]) - theta_k[1] * np.sin(q[0] + q[1]),
+             -theta_k[1] * np.sin(q[0] + q[1])],
+            [theta_k[0] * np.cos(q[0]) + theta_k[1] * np.cos(q[0] + q[1]),
+             theta_k[1] * np.cos(q[0] + q[1])]])
+
+        return np.dot(learn_rate_d,
+                      dq - np.dot(np.linalg.pinv(J_hat),
+                                  0.0 - alpha * delta_x))
+
+    training_node = nengo.Node(training_func, size_in=arm.DOF*3+2,
+                               size_out=arm.DOF)
+
+    nengo.Connection(training_node, conn_learn_dyn.learning_rule,
+                     transform=-learn_rate_d)
