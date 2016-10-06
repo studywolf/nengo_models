@@ -30,7 +30,7 @@ with model:
 
     # create input nodes
     hand = np.zeros(2)
-    trail_data = np.zeros((200, 2))
+    trail_data = np.zeros((100, 2))
 
     def arm_func(t, x):
         global hand, trail_data
