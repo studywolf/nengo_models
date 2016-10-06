@@ -88,8 +88,8 @@ with model:
     arm_func._nengo_html_ = ''
 
     np.random.seed(2)
-    # task = 'point to point'
-    task ='circle trace'
+    task = 'point to point'
+    # task ='circle trace'
     if task == 'circle trace':
         # specify torque input to arm
         target_node = nengo.Node(lambda t: np.array(
