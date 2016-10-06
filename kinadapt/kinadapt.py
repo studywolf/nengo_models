@@ -25,7 +25,7 @@ dt = 1e-3
 arm = arm.two_link(dt=dt)
 arm.reset(q=[np.pi/5.5, np.pi/1.7], dq=[0, 0])
 
-model = nengo.Network(seed=1)
+model = nengo.Network(seed=3)
 with model:
 
     # create input nodes
@@ -87,7 +87,7 @@ with model:
     arm_node = nengo.Node(output=arm_func, size_in=4, size_out=6)
     arm_func._nengo_html_ = ''
 
-    np.random.seed(2)
+    np.random.seed(3)
     task = 'point to point'
     # task ='circle trace'
     if task == 'circle trace':
@@ -101,7 +101,7 @@ with model:
 
         def target_func(t):
             global count, target
-            if count % 3000 == 0:
+            if count % 2000 == 0:
                 target = (np.random.random(2) *
                           np.array([2.5, 2]) +
                           np.array([-1.25, 1]))
@@ -127,10 +127,10 @@ with model:
     hand_lp = np.zeros(2)  # low pass filtered hand position
 
     # parameters from experiment 1 of cheah and slotine, 2005
-    kp = 500
+    kp = 400
     kv = 100
-    learn_rate_k = np.diag([0.04, 0.045]) * 1e-2
-    learn_rate_d = .0005
+    learn_rate_k = np.diag([0.04, 0.045]) * 1e-3
+    learn_rate_d = .0005 * 1e-2
     alpha = 1.2
     lamb = 200.0 * np.pi
 
