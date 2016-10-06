@@ -20,9 +20,6 @@ import numpy as np
 
 import arm
 
-import importlib
-importlib.reload(arm)
-
 # set the initial position of the arm
 dt = 1e-3
 arm = arm.two_link(dt=dt)
@@ -33,7 +30,7 @@ with model:
 
     # create input nodes
     hand = np.zeros(2)
-    trail_data = np.zeros((300, 2))
+    trail_data = np.zeros((200, 2))
 
     def arm_func(t, x):
         global hand, trail_data
@@ -63,7 +60,7 @@ with model:
             trail_data[:-1] = trail_data[1:]
             trail_data[-1] = [x3, y3]
 
-        trail = '''xa'''
+        trail = ''''''
         for ii in range(trail_data.shape[0] - 1):
             trail += ('<line x1="%f" y1="%f" x2="%f" y2="%f" ' %
                       (trail_data[ii, 0], trail_data[ii, 1],
@@ -88,9 +85,11 @@ with model:
 
         return data
     arm_node = nengo.Node(output=arm_func, size_in=4, size_out=6)
+    arm_func._nengo_html_ = ''
 
     np.random.seed(2)
-    task = 'point to point'  # 'circle trace'
+    # task = 'point to point'
+    task ='circle trace'
     if task == 'circle trace':
         # specify torque input to arm
         target_node = nengo.Node(lambda t: np.array(
@@ -128,9 +127,9 @@ with model:
     hand_lp = np.zeros(2)  # low pass filtered hand position
 
     # parameters from experiment 1 of cheah and slotine, 2005
-    kp = 400
+    kp = 500
     kv = 100
-    learn_rate_k = np.diag([0.04, 0.045]) * 1e-3
+    learn_rate_k = np.diag([0.04, 0.045]) * 1e-2
     learn_rate_d = .0005
     alpha = 1.2
     lamb = 200.0 * np.pi
