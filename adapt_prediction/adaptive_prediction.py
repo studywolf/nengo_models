@@ -1,5 +1,8 @@
 """ An example of adaptive prediction. The system learns to supplement
-a linear prediction of the state n time steps into the future. """
+a linear prediction of the state n time steps into the future.
+
+NOTE: requires the pes-synapse branch of Nengo
+"""
 
 import numpy as np
 
